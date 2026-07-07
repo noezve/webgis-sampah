@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 import Admin from "./pages/Admin";
-import Transporter from "./pages/Transporter";
+import Courier from "./pages/Courier";
 import Warga from "./pages/Warga";
 import Login from "./pages/Login";
 
@@ -23,7 +23,7 @@ function App() {
         .from("profiles")
         .select("role")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error(error);
@@ -31,7 +31,18 @@ function App() {
         return;
       }
 
-      setRole(data?.role);
+      if (!data?.role) {
+        const { data: fallbackData } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .limit(1);
+
+        setRole(fallbackData?.[0]?.role || "guest");
+        return;
+      }
+
+      setRole(data.role);
     };
 
     getUser();
@@ -49,8 +60,8 @@ function App() {
     return <Admin />;
   }
 
-  if (role === "transporter") {
-    return <Transporter />;
+  if (role === "courier") {
+    return <Courier />;
   }
 
   return <Warga />;

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import Map from "../components/Map";
+import { readTransactions, getTransactionSummary } from "../lib/transactions";
 
 const s = {
   page: {
@@ -107,17 +108,23 @@ export default function Admin() {
   const [tab, setTab] = useState("peta");
   const [list, setList] = useState({ warga: [], bayar: [], angkut: [] });
   const [filter, setFilter] = useState("semua");
+  const [transactionSummary, setTransactionSummary] = useState({
+    warga: { count: 0, total: 0 },
+    courier: { count: 0, total: 0 },
+  });
 
   const fetchAll = useCallback(async () => {
     const { data: w } = await supabase.from("warga").select("*, pembayaran(status)");
     const { data: b } = await supabase.from("pembayaran").select("*, warga(nama)");
     const { data: a } = await supabase.from("pengangkutan").select("*, warga(nama), profiles(nama)");
+    const transactions = readTransactions();
     
     setList({ 
       warga: w || [], 
       bayar: b || [], 
       angkut: a || [] 
     });
+    setTransactionSummary(getTransactionSummary(transactions));
   }, []);
 
   useEffect(() => {
@@ -172,6 +179,19 @@ export default function Admin() {
     Logout
   </button>
 </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 20 }}>
+        <div style={s.card}>
+          <h3 style={{ margin: "0 0 8px", color: "#16a34a" }}>Total Transaksi Warga</h3>
+          <div style={{ fontSize: 24, fontWeight: 700 }}>{transactionSummary.warga.count}</div>
+          <div style={{ color: "#64748b" }}>Rp {transactionSummary.warga.total.toLocaleString("id-ID")}</div>
+        </div>
+        <div style={s.card}>
+          <h3 style={{ margin: "0 0 8px", color: "#16a34a" }}>Total Transaksi Courier</h3>
+          <div style={{ fontSize: 24, fontWeight: 700 }}>{transactionSummary.courier.count}</div>
+          <div style={{ color: "#64748b" }}>Rp {transactionSummary.courier.total.toLocaleString("id-ID")}</div>
+        </div>
+      </div>
 
       {/* Navigasi Tab */}
       <div style={s.tabContainer}>
@@ -268,7 +288,7 @@ export default function Admin() {
           <thead>
             <tr style={{ background: "#f4f4f5", textAlign: "left" }}>
               <th style={s.th}>Nama Warga</th>
-              <th style={s.th}>Driver/Transporter</th>
+              <th style={s.th}>Driver/Courier</th>
               <th style={s.th}>Status</th>
               <th style={s.th}>Aksi</th>
             </tr>

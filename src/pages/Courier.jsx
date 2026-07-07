@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import Map, { parseLocation } from "../components/Map";
+import { addTransaction, readTransactions } from "../lib/transactions";
 
 const styles = {
   page: {
@@ -112,7 +113,7 @@ const styles = {
   },
 };
 
-export default function Transporter() {
+export default function Courier() {
   const [tab, setTab] = useState("peta");
   const [search, setSearch] = useState("");
   const [myId, setMyId] = useState(null);
@@ -121,10 +122,11 @@ export default function Transporter() {
     warga: [],
     tugas: [],
   });
+  const [transactions, setTransactions] = useState([]);
 
   const fetchAll = useCallback(
     async (tid) => {
-      const transporterId = tid || myId;
+      const courierId = tid || myId;
 
       const { data: wargaData } =
         await supabase
@@ -143,12 +145,17 @@ export default function Transporter() {
               location
             )
           `)
-          .eq("transporter_id", transporterId);
+          .eq("transporter_id", courierId);
 
       setData({
         warga: wargaData || [],
         tugas: tugasData || [],
       });
+
+      const localTransactions = readTransactions().filter(
+        (item) => item.courier_id === courierId && item.source === "courier"
+      );
+      setTransactions(localTransactions);
     },
     [myId]
   );
@@ -193,7 +200,16 @@ export default function Transporter() {
       });
 
     if (!error) {
-      alert("Tugas berhasil diambil");
+      addTransaction(
+        {
+          source: "courier",
+          courier_id: myId,
+          amount: 25000,
+          description: "Komisi pengangkutan sampah",
+        },
+        window.localStorage
+      );
+      alert("Tugas berhasil diambil dan transaksi keuangan dicatat");
       fetchAll(myId);
     }
   };
@@ -233,7 +249,7 @@ export default function Transporter() {
       <div style={styles.container}>
         <div style={styles.header}>
           <div>
-            <h2>Dashboard Transporter</h2>
+            <h2>Dashboard Courier</h2>
             <small>
               Sistem Pengangkutan Sampah
             </small>
@@ -280,6 +296,11 @@ export default function Transporter() {
               }
             </h3>
             <p>Selesai</p>
+          </div>
+
+          <div style={styles.statCard}>
+            <h3>Rp {transactions.reduce((sum, item) => sum + Number(item.amount || 0), 0).toLocaleString("id-ID")}</h3>
+            <p>Total Pendapatan</p>
           </div>
         </div>
 
@@ -373,6 +394,17 @@ export default function Transporter() {
 
         {tab === "tugas" && (
           <div style={styles.card}>
+            <h3 style={{ marginTop: 0 }}>Riwayat Transaksi Keuangan</h3>
+            {transactions.length === 0 ? (
+              <p>Belum ada transaksi keuangan.</p>
+            ) : (
+              transactions.map((item) => (
+                <div key={item.id} style={{ padding: "10px 0", borderBottom: "1px solid #e2e8f0" }}>
+                  <b>Rp {Number(item.amount || 0).toLocaleString("id-ID")}</b> - {item.description}
+                </div>
+              ))
+            )}
+
             <table style={styles.table}>
               <thead>
                 <tr>

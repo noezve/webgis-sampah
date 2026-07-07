@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import Map from "../components/Map";
+import { addTransaction, readTransactions } from "../lib/transactions";
 
 const styles = {
   page: {
@@ -106,6 +107,11 @@ export default function Warga() {
     bayar: [],
     angkut: [],
   });
+  const [transactions, setTransactions] = useState([]);
+  const [transactionForm, setTransactionForm] = useState({
+    amount: "",
+    description: "",
+  });
 
   const refresh = async (id) => {
     const sampah = await supabase
@@ -131,6 +137,11 @@ export default function Warga() {
       bayar: pembayaran.data || [],
       angkut: pengangkutan.data || [],
     });
+
+    const localTransactions = readTransactions().filter(
+      (item) => item.warga_id === id && item.source === "warga"
+    );
+    setTransactions(localTransactions);
   };
 
   useEffect(() => {
@@ -211,7 +222,7 @@ export default function Warga() {
   const addData = async (table, payload) => {
     if (!warga) {
       alert("Simpan profil terlebih dahulu.");
-      return;
+      return false;
     }
 
     const { error } = await supabase
@@ -223,11 +234,11 @@ export default function Warga() {
 
     if (error) {
       alert(error.message);
-      return;
+      return false;
     }
 
     refresh(warga.id);
-    alert("Data berhasil disimpan.");
+    return true;
   };
 
   const logout = async () => {
@@ -354,16 +365,66 @@ export default function Warga() {
               Request Pengangkutan
             </button>
 
-            <button
-              onClick={() =>
-                addData("pembayaran", {
-                  status: "sudah",
-                  tanggal: new Date(),
+            <h3 style={styles.sectionTitle}>Transaksi Keuangan</h3>
+
+            <input
+              type="number"
+              style={styles.input}
+              placeholder="Nominal (Rp)"
+              value={transactionForm.amount}
+              onChange={(e) =>
+                setTransactionForm({
+                  ...transactionForm,
+                  amount: e.target.value,
                 })
               }
-              style={styles.btn("#2563eb")}
+            />
+
+            <input
+              style={styles.input}
+              placeholder="Keterangan"
+              value={transactionForm.description}
+              onChange={(e) =>
+                setTransactionForm({
+                  ...transactionForm,
+                  description: e.target.value,
+                })
+              }
+            />
+
+            <button
+              onClick={async () => {
+                const nominal = Number(transactionForm.amount);
+
+                if (!nominal) {
+                  alert("Masukkan nominal transaksi.");
+                  return;
+                }
+
+                const saved = await addData("pembayaran", {
+                  status: "sudah",
+                  tanggal: new Date(),
+                });
+
+                if (saved) {
+                  addTransaction(
+                    {
+                      source: "warga",
+                      warga_id: warga.id,
+                      amount: nominal,
+                      description:
+                        transactionForm.description || "Pembayaran iuran",
+                    },
+                    window.localStorage
+                  );
+
+                  setTransactionForm({ amount: "", description: "" });
+                  alert("Pembayaran dan transaksi keuangan berhasil dicatat.");
+                }
+              }}
+              style={styles.btn("#0f766e")}
             >
-              Bayar Iuran
+              Bayar Iuran & Catat Transaksi
             </button>
           </div>
 
@@ -383,9 +444,9 @@ export default function Warga() {
                 >
                   <b>Status:</b> {item.status}
                   <br />
-                  <b>Petugas:</b>{" "}
+                  <b>Courier:</b>{" "}
                   {item.transporter?.nama ||
-                    "Menunggu Petugas"}
+                    "Menunggu Courier"}
                 </div>
               ))
             )}
@@ -410,6 +471,25 @@ export default function Warga() {
                     : "-"}
                   <br />
                   <b>Status:</b> {item.status}
+                </div>
+              ))
+            )}
+
+            <h3 style={styles.sectionTitle}>
+              Riwayat Transaksi Keuangan
+            </h3>
+
+            {transactions.length === 0 ? (
+              <p>Belum ada transaksi keuangan.</p>
+            ) : (
+              transactions.map((item) => (
+                <div
+                  key={item.id}
+                  style={styles.historyCard}
+                >
+                  <b>Nominal:</b> Rp {Number(item.amount || 0).toLocaleString("id-ID")}
+                  <br />
+                  <b>Keterangan:</b> {item.description}
                 </div>
               ))
             )}

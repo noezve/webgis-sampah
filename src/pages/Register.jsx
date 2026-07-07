@@ -9,32 +9,56 @@ export default function Register() {
     password: "",
     role: "warga",
   });
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
   const handleRegister = async () => {
+    if (!form.nama || !form.email || !form.password) {
+      alert("Semua field wajib diisi.");
+      return;
+    }
+
+    setLoading(true);
+
     const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+      },
     });
 
     if (error) {
+      setLoading(false);
       return alert(error.message);
     }
 
-    const { error: pError } = await supabase
-      .from("profiles")
-      .insert({
-        id: data.user.id,
-        nama: form.nama,
-        role: form.role,
-      });
+    const userId = data?.user?.id;
 
-    if (pError) {
-      return alert("Gagal simpan profil");
+    if (userId) {
+      const { error: pError } = await supabase.from("profiles").upsert(
+        {
+          id: userId,
+          nama: form.nama,
+          role: form.role,
+        },
+        { onConflict: "id" }
+      );
+
+      if (pError) {
+        setLoading(false);
+        return alert(`Akun dibuat, tetapi gagal menyimpan profil role: ${pError.message}`);
+      }
     }
 
-    alert("Berhasil! Silakan login.");
+    setLoading(false);
+
+    alert(
+      data?.user
+        ? "Akun berhasil dibuat. Silakan login untuk masuk."
+        : "Pendaftaran berhasil. Silakan cek email untuk verifikasi sebelum login."
+    );
     navigate("/login");
   };
 
@@ -104,23 +128,24 @@ export default function Register() {
         }}
       >
         <option value="warga">Warga</option>
-        <option value="transporter">Transporter</option>
+        <option value="courier">Courier</option>
         <option value="admin">Admin</option>
       </select>
 
       <button
         onClick={handleRegister}
+        disabled={loading}
         style={{
           width: "100%",
           padding: 10,
-          background: "#2563eb",
+          background: loading ? "#64748b" : "#2563eb",
           color: "#fff",
           border: "none",
           borderRadius: 5,
-          cursor: "pointer",
+          cursor: loading ? "not-allowed" : "pointer",
         }}
       >
-        Daftar
+        {loading ? "Mendaftarkan..." : "Daftar"}
       </button>
     </div>
   );
