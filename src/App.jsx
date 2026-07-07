@@ -10,19 +10,6 @@ function App() {
 
   useEffect(() => {
     const getUser = async () => {
-<<<<<<< HEAD
-      const { data: userData } = await supabase.auth.getUser();
-
-      if (!userData.user) return setRole("guest");
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", userData.user.id)
-        .single();
-
-      setRole(data?.role);
-=======
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -56,40 +43,16 @@ function App() {
       }
 
       setRole(data.role);
->>>>>>> db2786e337ccdb4277a46bfb0e23404e01654e67
     };
 
     getUser();
   }, []);
 
-<<<<<<< HEAD
   if (role === null) return <h2>Loading...</h2>;
   if (role === "guest") return <Login />;
   if (role === "admin") return <Admin />;
-  if (role === "transporter") return <Courier />;
+  if (role === "transporter" || role === "courier") return <Courier />;
   return <Warga />;
 }
 
 export default App;
-=======
-  if (role === null) {
-    return <h2>Loading...</h2>;
-  }
-
-  if (role === "guest") {
-    return <Login />;
-  }
-
-  if (role === "admin") {
-    return <Admin />;
-  }
-
-  if (role === "courier") {
-    return <Courier />;
-  }
-
-  return <Warga />;
-}
-
-export default App;
->>>>>>> db2786e337ccdb4277a46bfb0e23404e01654e67
