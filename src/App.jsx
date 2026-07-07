@@ -10,6 +10,7 @@ function App() {
 
   useEffect(() => {
     const getUser = async () => {
+<<<<<<< HEAD
       const { data: userData } = await supabase.auth.getUser();
 
       if (!userData.user) return setRole("guest");
@@ -21,11 +22,47 @@ function App() {
         .single();
 
       setRole(data?.role);
+=======
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setRole("guest");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error(error);
+        setRole("guest");
+        return;
+      }
+
+      if (!data?.role) {
+        const { data: fallbackData } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .limit(1);
+
+        setRole(fallbackData?.[0]?.role || "guest");
+        return;
+      }
+
+      setRole(data.role);
+>>>>>>> db2786e337ccdb4277a46bfb0e23404e01654e67
     };
 
     getUser();
   }, []);
 
+<<<<<<< HEAD
   if (role === null) return <h2>Loading...</h2>;
   if (role === "guest") return <Login />;
   if (role === "admin") return <Admin />;
@@ -34,3 +71,25 @@ function App() {
 }
 
 export default App;
+=======
+  if (role === null) {
+    return <h2>Loading...</h2>;
+  }
+
+  if (role === "guest") {
+    return <Login />;
+  }
+
+  if (role === "admin") {
+    return <Admin />;
+  }
+
+  if (role === "courier") {
+    return <Courier />;
+  }
+
+  return <Warga />;
+}
+
+export default App;
+>>>>>>> db2786e337ccdb4277a46bfb0e23404e01654e67
